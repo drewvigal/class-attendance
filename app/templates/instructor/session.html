@@ -165,11 +165,26 @@
       {% if record.reflection_text %}
       <p style="font-size:0.875rem; color:#374151; margin-top:0.25rem;">{{ record.reflection_text }}</p>
       {% endif %}
-      <div style="margin-top:0.4rem; display:flex; align-items:center; gap:0.5rem;">
-        <textarea class="note-field" data-record-id="{{ record.id }}"
-          rows="1" placeholder="Add a note…"
-          style="flex:1; font-size:0.78rem; border:1px solid #e5e7eb; border-radius:4px; padding:0.3rem 0.5rem; resize:vertical; font-family:inherit;">{{ record.instructor_note or '' }}</textarea>
-        <span class="note-saved-{{ record.id }} muted" style="font-size:0.72rem; opacity:0; transition:opacity 0.4s; white-space:nowrap;">Saved ✓</span>
+      <div style="margin-top:0.4rem;">
+        {% if record.instructor_note %}
+        <div style="display:flex; align-items:center; gap:0.5rem;">
+          <textarea class="note-field" data-record-id="{{ record.id }}"
+            rows="1" placeholder="Add a note…"
+            style="flex:1; font-size:0.78rem; border:1px solid #e5e7eb; border-radius:4px; padding:0.3rem 0.5rem; resize:vertical; font-family:inherit;">{{ record.instructor_note }}</textarea>
+          <span class="note-saved-{{ record.id }} muted" style="font-size:0.72rem; opacity:0; transition:opacity 0.4s; white-space:nowrap;">Saved ✓</span>
+        </div>
+        {% else %}
+        <span class="add-note-toggle muted"
+              data-record-id="{{ record.id }}"
+              style="font-size:0.75rem; cursor:pointer; user-select:none;">+ add note</span>
+        <div class="note-field-wrap" data-record-id="{{ record.id }}"
+             style="display:none; align-items:center; gap:0.5rem;">
+          <textarea class="note-field" data-record-id="{{ record.id }}"
+            rows="1" placeholder="Add a note…"
+            style="flex:1; font-size:0.78rem; border:1px solid #e5e7eb; border-radius:4px; padding:0.3rem 0.5rem; resize:vertical; font-family:inherit;"></textarea>
+          <span class="note-saved-{{ record.id }} muted" style="font-size:0.72rem; opacity:0; transition:opacity 0.4s; white-space:nowrap;">Saved ✓</span>
+        </div>
+        {% endif %}
       </div>
     </div>
     {% endfor %}
@@ -191,19 +206,31 @@
 {% endif %}
 
 <!-- Delete session -->
+{% set session_label = "Session #" ~ session.session_number ~ " (" ~ session.session_date.strftime("%b %-d") ~ ")" %}
 <div class="card" style="border-top-color: var(--berry); margin-top: 2rem;">
   <h2 style="color: var(--berry);">Danger Zone</h2>
   <p class="muted" style="margin: 0.4rem 0 1rem;">
-    Permanently deletes this session and all {{ present|length + flagged|length }} submission(s) recorded for it. This cannot be undone.
+    Permanently deletes this session and all {{ (present|length) + (flagged|length) }} submission(s) recorded for it. This cannot be undone.
   </p>
   <form method="post"
         action="{{ url_for('instructor.delete_session', course_id=course.id, session_id=session.id) }}"
-        onsubmit="return confirm('Delete Session #{{ session.session_number }} ({{ session.session_date.strftime(\'%b %-d\') }}) and all its attendance records? This cannot be undone.');">
+        onsubmit="return confirm('Delete {{ session_label }} and all its attendance records? This cannot be undone.');">
     <button type="submit" class="btn btn-danger btn-sm">Delete This Session</button>
   </form>
 </div>
 
 <script>
+// "+ add note" toggle — show textarea on click
+document.querySelectorAll('.add-note-toggle').forEach(function(link) {
+  link.addEventListener('click', function() {
+    var id = link.getAttribute('data-record-id');
+    var wrap = document.querySelector('.note-field-wrap[data-record-id="' + id + '"]');
+    link.style.display = 'none';
+    wrap.style.display = 'flex';
+    wrap.querySelector('textarea').focus();
+  });
+});
+
 // Auto-save note fields on blur
 document.querySelectorAll('.note-field').forEach(function(ta) {
   ta.addEventListener('blur', function() {
