@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Attendance Tracker{% endblock %}</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ── UO Brand Colors ──────────────────────────────────────────────────
+       Primary:   UO Green #007030  |  UO Yellow #FEE11A
+       Secondary: Legacy Green #104735  |  Grass Green #489D46
+                  Dark Blue #004F6E   |  Light Blue #00A5B5
+                  Berry #8D1D58       |  Dark Gray #4D5859
+                  Medium Gray #A2AAAD |  Light Gray #D8DCDA
+    ─────────────────────────────────────────────────────────────────────── */
+    :root {
+      --uo-green:       #007030;
+      --uo-yellow:      #FEE11A;
+      --legacy-green:   #104735;
+      --grass-green:    #489D46;
+      --dark-blue:      #004F6E;
+      --light-blue:     #00A5B5;
+      --berry:          #8D1D58;
+      --dark-gray:      #4D5859;
+      --medium-gray:    #A2AAAD;
+      --light-gray:     #D8DCDA;
+
+      /* Semantic aliases */
+      --primary:   var(--uo-green);
+      --accent:    var(--uo-yellow);
+      --danger:    var(--berry);
+      --info:      var(--dark-blue);
+      --muted-fg:  var(--dark-gray);
+      --border:    var(--light-gray);
+      --light:     #f5f6f4;   /* off-white with a hint of UO green */
+      --text:      #1c1c1c;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--light);
+      color: var(--text);
+      line-height: 1.5;
+    }
+
+    /* ── Navigation ─────────────────────────────────────────────────────── */
+    nav {
+      background: var(--uo-green);
+      color: #fff;
+      padding: 0 1.5rem;
+      display: flex;
+      align-items: stretch;
+      gap: 0;
+      border-bottom: 4px solid var(--uo-yellow);
+    }
+    nav .brand {
+      font-size: 1.05rem;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+      padding: 0.8rem 1.5rem 0.8rem 0;
+      margin-right: 0.5rem;
+      color: #fff;
+    }
+    nav a {
+      color: rgba(255,255,255,0.88);
+      text-decoration: none;
+      font-weight: 500;
+      font-size: 0.9rem;
+      padding: 0.8rem 1rem;
+      display: flex;
+      align-items: center;
+      border-bottom: 3px solid transparent;
+      margin-bottom: -4px; /* overlap the yellow stripe */
+      transition: color 0.15s, border-color 0.15s;
+    }
+    nav a:hover {
+      color: #fff;
+      border-bottom-color: var(--uo-yellow);
+    }
+
+    /* ── Layout ─────────────────────────────────────────────────────────── */
+    main { max-width: 1100px; margin: 2rem auto; padding: 0 1rem; }
+
+    h1 { font-size: 1.6rem; margin-bottom: 1rem; color: var(--legacy-green); }
+    h2 { font-size: 1.25rem; margin-bottom: 0.75rem; color: var(--legacy-green); }
+    h3 { font-size: 1.05rem; margin-bottom: 0.5rem; }
+
+    .card {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 1.25rem;
+      margin-bottom: 1.25rem;
+      border-top: 3px solid var(--uo-green);
+    }
+
+    /* ── Buttons ─────────────────────────────────────────────────────────── */
+    .btn {
+      display: inline-block;
+      padding: 0.5rem 1rem;
+      border-radius: 4px;
+      border: none;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: filter 0.15s;
+    }
+    .btn:hover { filter: brightness(0.9); }
+    .btn-primary { background: var(--uo-green);  color: #fff; }
+    .btn-success { background: var(--grass-green); color: #fff; }
+    .btn-danger  { background: var(--berry);      color: #fff; }
+    .btn-warning { background: var(--uo-yellow);  color: var(--legacy-green); }
+    .btn-info    { background: var(--dark-blue);  color: #fff; }
+    .btn-ghost   { background: transparent; color: var(--uo-green); border: 1.5px solid var(--uo-green); }
+    .btn-sm      { padding: 0.3rem 0.65rem; font-size: 0.8rem; }
+
+    /* ── Badges ─────────────────────────────────────────────────────────── */
+    .badge {
+      display: inline-block;
+      padding: 0.2rem 0.5rem;
+      border-radius: 3px;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+    .badge-green  { background: #d6eedc; color: var(--legacy-green); }
+    .badge-red    { background: #f4d0e1; color: var(--berry); }
+    .badge-yellow { background: #fef9cc; color: #5c3d00; }
+    .badge-navy   { background: #cce3ed; color: var(--dark-blue); }
+    .badge-gray   { background: var(--light-gray); color: var(--dark-gray); }
+
+    /* ── Alerts ─────────────────────────────────────────────────────────── */
+    .alert {
+      padding: 0.75rem 1rem;
+      border-radius: 4px;
+      margin-bottom: 1rem;
+      font-size: 0.9rem;
+      border-left: 4px solid;
+    }
+    .alert-success { background: #d6eedc; color: var(--legacy-green); border-color: var(--uo-green); }
+    .alert-error   { background: #f4d0e1; color: var(--berry);        border-color: var(--berry); }
+    .alert-warning { background: #fef9cc; color: #5c3d00;             border-color: var(--uo-yellow); }
+    .alert-info    { background: #cce3ed; color: var(--dark-blue);    border-color: var(--dark-blue); }
+
+    /* ── Tables ─────────────────────────────────────────────────────────── */
+    table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+    th, td { padding: 0.5rem 0.75rem; border: 1px solid var(--border); text-align: left; }
+    th { background: var(--legacy-green); color: #fff; font-weight: 600; }
+    tr:nth-child(even) td { background: #f8faf8; }
+
+    /* ── Forms ─────────────────────────────────────────────────────────── */
+    form label { display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.9rem; color: var(--legacy-green); }
+    form input, form select, form textarea {
+      width: 100%;
+      padding: 0.5rem 0.75rem;
+      border: 1px solid var(--medium-gray);
+      border-radius: 4px;
+      font-size: 0.9rem;
+      font-family: inherit;
+      margin-bottom: 1rem;
+    }
+    form textarea { min-height: 120px; resize: vertical; }
+    form input:focus, form select:focus, form textarea:focus {
+      outline: none;
+      border-color: var(--uo-green);
+      box-shadow: 0 0 0 2px rgba(0, 112, 48, 0.18);
+    }
+
+    /* ── Utilities ─────────────────────────────────────────────────────── */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
+    @media (max-width: 640px) {
+      .grid-2, .grid-3 { grid-template-columns: 1fr; }
+    }
+
+    .muted { color: var(--muted-fg); font-size: 0.85rem; }
+    .mt-1 { margin-top: 0.5rem; }
+    .mt-2 { margin-top: 1rem; }
+    .mt-3 { margin-top: 1.5rem; }
+    .flex { display: flex; align-items: center; }
+    .gap-1 { gap: 0.5rem; }
+    .gap-2 { gap: 1rem; }
+    .justify-between { justify-content: space-between; }
+
+    /* ── Attendance grid ────────────────────────────────────────────────── */
+    .attendance-grid { overflow-x: auto; }
+    .att-cell { text-align: center; font-weight: 700; }
+    .att-present { background: #d6eedc !important; color: var(--legacy-green); }
+    .att-absent  { background: #f4d0e1 !important; color: var(--berry); }
+    .att-flagged { background: #fef9cc !important; color: #5c3d00; }
+    .att-warn    { background: #fde8cc !important; color: #7c3000; }
+  </style>
+</head>
+<body>
+  {% block nav %}
+  <nav>
+    <span class="brand">
+      <!-- UO "O" wordmark approximation in SVG -->
+      <svg width="22" height="22" viewBox="0 0 22 22" style="vertical-align:middle; margin-right:7px;" aria-hidden="true">
+        <circle cx="11" cy="11" r="10" fill="#FEE11A"/>
+        <circle cx="11" cy="11" r="6.5" fill="#007030"/>
+        <text x="11" y="15.5" text-anchor="middle" font-family="Georgia,serif" font-size="12" font-weight="bold" fill="#FEE11A">O</text>
+      </svg>
+      Attendance Tracker
+    </span>
+    <a href="{{ url_for('instructor.index') }}">My Courses</a>
+    <a href="{{ url_for('instructor.setup') }}">+ New Course</a>
+  </nav>
+  {% endblock %}
+  <main>
+    {% for category, message in get_flashed_messages(with_categories=True) %}
+      <div class="alert alert-{{ category }}">{{ message }}</div>
+    {% endfor %}
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Check-In Not Open — {{ course.course_name }}</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --uo-green:     #007030;
+      --legacy-green: #104735;
+      --uo-yellow:    #FEE11A;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f5f6f4;
+      color: #1c1c1c;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      background: var(--uo-green);
+      color: #fff;
+      padding: 1rem 1.25rem;
+      border-bottom: 4px solid var(--uo-yellow);
+    }
+    header h1 { font-size: 1.1rem; font-weight: 700; }
+    header p  { font-size: 0.85rem; opacity: 0.85; margin-top: 0.2rem; }
+    main {
+      flex: 1;
+      max-width: 480px;
+      width: 100%;
+      margin: 3rem auto;
+      padding: 0 1rem;
+      text-align: center;
+    }
+    .icon { font-size: 3.5rem; margin-bottom: 1rem; color: var(--uo-green); }
+    .card {
+      background: #fff;
+      border-radius: 6px;
+      border-top: 4px solid var(--uo-green);
+      padding: 2rem 1.75rem;
+      box-shadow: 0 2px 16px rgba(0,0,0,0.07);
+    }
+    h2 { font-size: 1.3rem; color: var(--legacy-green); margin-bottom: 0.75rem; }
+    p  { color: #4D5859; font-size: 0.95rem; line-height: 1.6; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>{{ course.course_name }}</h1>
+    <p>Attendance Check-In</p>
+  </header>
+  <main>
+    <div class="card">
+      <div class="icon">&#9203;</div>
+      <h2>Check-in isn't open yet</h2>
+      <p>
+        Your instructor hasn't opened the attendance window for today's session.
+        Come back when class begins and scan this QR code again.
+      </p>
+    </div>
+  </main>
+</body>
+</html>

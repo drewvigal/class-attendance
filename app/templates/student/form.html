@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ course.course_name }} — Attendance</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --uo-green:     #007030;
+      --legacy-green: #104735;
+      --uo-yellow:    #FEE11A;
+      --berry:        #8D1D58;
+      --dark-blue:    #004F6E;
+      --light-gray:   #D8DCDA;
+      --medium-gray:  #A2AAAD;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f5f6f4;
+      color: #1c1c1c;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      background: var(--uo-green);
+      color: #fff;
+      padding: 1rem 1.25rem;
+      border-bottom: 4px solid var(--uo-yellow);
+    }
+    header h1 { font-size: 1.1rem; font-weight: 700; }
+    header p  { font-size: 0.85rem; opacity: 0.85; margin-top: 0.2rem; }
+
+    main {
+      flex: 1;
+      max-width: 640px;
+      width: 100%;
+      margin: 1.5rem auto;
+      padding: 0 1rem;
+    }
+
+    .card {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .status-banner {
+      padding: 0.75rem 1rem;
+      border-radius: 4px;
+      margin-bottom: 1rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+      border-left: 4px solid;
+    }
+    .status-open   { background: #d6eedc; color: var(--legacy-green); border-color: var(--uo-green); }
+    .status-closed { background: #fef9cc; color: #5c3d00;             border-color: var(--uo-yellow); }
+
+    label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 0.4rem;
+      font-size: 0.95rem;
+    }
+    .hint { font-size: 0.8rem; color: #6c757d; margin-bottom: 0.6rem; display: block; }
+
+    /* Autocomplete wrapper */
+    .autocomplete-wrap { position: relative; margin-bottom: 1.25rem; }
+    #name-input {
+      width: 100%;
+      padding: 0.75rem;
+      border: 2px solid var(--light-gray);
+      border-radius: 6px;
+      font-size: 1rem;
+      font-family: inherit;
+    }
+    #name-input:focus { outline: none; border-color: var(--uo-green); box-shadow: 0 0 0 2px rgba(0,112,48,0.15); }
+    #suggestions {
+      position: absolute;
+      top: 100%;
+      left: 0; right: 0;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-top: none;
+      border-radius: 0 0 8px 8px;
+      max-height: 220px;
+      overflow-y: auto;
+      z-index: 100;
+      display: none;
+    }
+    .suggestion-item {
+      padding: 0.65rem 0.75rem;
+      cursor: pointer;
+      font-size: 0.95rem;
+    }
+    .suggestion-item:hover, .suggestion-item.active { background: #d6eedc; }
+    #name-confirmed {
+      display: none;
+      margin-top: 0.5rem;
+      font-size: 0.85rem;
+      color: var(--uo-green);
+      font-weight: 600;
+    }
+
+    .prompt-box {
+      background: #eef7f1;
+      border-left: 4px solid var(--uo-green);
+      border-radius: 0 6px 6px 0;
+      padding: 0.9rem 1rem;
+      font-style: italic;
+      font-size: 0.95rem;
+      margin-bottom: 1.25rem;
+      color: var(--legacy-green);
+    }
+
+    textarea {
+      width: 100%;
+      padding: 0.75rem;
+      border: 2px solid var(--light-gray);
+      border-radius: 6px;
+      font-size: 0.95rem;
+      font-family: inherit;
+      resize: vertical;
+      min-height: 150px;
+    }
+    textarea:focus { outline: none; border-color: var(--uo-green); box-shadow: 0 0 0 2px rgba(0,112,48,0.15); }
+
+    #word-count {
+      font-size: 0.8rem;
+      color: #6c757d;
+      margin-top: 0.3rem;
+      text-align: right;
+    }
+    #word-count.ok     { color: var(--uo-green); }
+    #word-count.warn   { color: #7c3d00; }
+
+    .btn-submit {
+      display: block;
+      width: 100%;
+      padding: 0.9rem;
+      background: var(--uo-green);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 1rem;
+      transition: filter 0.15s;
+    }
+    .btn-submit:hover { filter: brightness(0.88); }
+    .btn-submit:disabled { background: var(--medium-gray); cursor: not-allowed; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>{{ course.course_name }}</h1>
+    <p>{{ session.session_date.strftime('%A, %B %-d, %Y') }} &mdash; Session #{{ session.session_number }}</p>
+  </header>
+
+  <main>
+    {% if window_status == 'closed' %}
+    <div class="status-banner status-closed">
+      The check-in window is closed. Submit anyway — your instructor will review late entries.
+    </div>
+    {% elif window_status == 'open' %}
+    <div class="status-banner status-open">
+      Check-in is open. Complete this form before the window closes.
+    </div>
+    {% endif %}
+
+    <form method="post" action="{{ url_for('student.course_submit', course_token=course_token) }}" id="attend-form">
+      <div class="card">
+        <label for="name-input">Your Name</label>
+        <span class="hint">Start typing your last name to find yourself on the roster.</span>
+        <div class="autocomplete-wrap">
+          <input type="text" id="name-input" placeholder="Start typing your name…"
+                 autocomplete="off" spellcheck="false">
+          <div id="suggestions"></div>
+          <input type="hidden" id="student_id" name="student_id">
+          <div id="name-confirmed">&#10003; Name confirmed</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <label>Today's Reflection</label>
+        <div class="prompt-box">{{ prompt }}</div>
+        <textarea name="reflection" id="reflection-text"
+                  placeholder="Write at least 25 words…" required></textarea>
+        <div id="word-count">0 words</div>
+      </div>
+
+      <button type="submit" class="btn-submit" id="submit-btn" disabled>
+        Submit Attendance
+      </button>
+    </form>
+  </main>
+
+  <script>
+    // Roster data from server
+    const roster = [
+      {% for s in students %}
+      { id: {{ s.id }}, display: "{{ s.first_name }} {{ s.last_name }}" }{% if not loop.last %},{% endif %}
+      {% endfor %}
+    ];
+
+    const nameInput    = document.getElementById('name-input');
+    const suggestionsEl= document.getElementById('suggestions');
+    const hiddenId     = document.getElementById('student_id');
+    const confirmed    = document.getElementById('name-confirmed');
+    const reflectionEl = document.getElementById('reflection-text');
+    const wordCountEl  = document.getElementById('word-count');
+    const submitBtn    = document.getElementById('submit-btn');
+
+    let selectedId = null;
+    let activeIndex = -1;
+
+    function countWords(text) {
+      return text.trim().split(/\s+/).filter(w => w.length > 0).length;
+    }
+
+    function updateSubmitState() {
+      const hasName = !!selectedId;
+      const words   = countWords(reflectionEl.value);
+      submitBtn.disabled = !(hasName && words >= 25);
+    }
+
+    function showSuggestions(query) {
+      const q = query.toLowerCase();
+      const matches = roster.filter(s => s.display.toLowerCase().includes(q)).slice(0, 8);
+      suggestionsEl.innerHTML = '';
+      activeIndex = -1;
+      if (!matches.length || !q) { suggestionsEl.style.display = 'none'; return; }
+      matches.forEach((s, i) => {
+        const div = document.createElement('div');
+        div.className = 'suggestion-item';
+        div.textContent = s.display;
+        div.dataset.id = s.id;
+        div.addEventListener('mousedown', () => selectStudent(s));
+        suggestionsEl.appendChild(div);
+      });
+      suggestionsEl.style.display = 'block';
+    }
+
+    function selectStudent(s) {
+      selectedId = s.id;
+      nameInput.value  = s.display;
+      hiddenId.value   = s.id;
+      confirmed.style.display = 'block';
+      suggestionsEl.style.display = 'none';
+      updateSubmitState();
+    }
+
+    function clearSelection() {
+      selectedId = null;
+      hiddenId.value = '';
+      confirmed.style.display = 'none';
+      updateSubmitState();
+    }
+
+    nameInput.addEventListener('input', () => {
+      clearSelection();
+      showSuggestions(nameInput.value);
+    });
+
+    nameInput.addEventListener('keydown', e => {
+      const items = suggestionsEl.querySelectorAll('.suggestion-item');
+      if (e.key === 'ArrowDown') {
+        activeIndex = Math.min(activeIndex + 1, items.length - 1);
+      } else if (e.key === 'ArrowUp') {
+        activeIndex = Math.max(activeIndex - 1, 0);
+      } else if (e.key === 'Enter' && activeIndex >= 0) {
+        e.preventDefault();
+        const id = parseInt(items[activeIndex].dataset.id);
+        selectStudent(roster.find(s => s.id === id));
+        return;
+      } else if (e.key === 'Escape') {
+        suggestionsEl.style.display = 'none';
+        return;
+      }
+      items.forEach((el, i) => el.classList.toggle('active', i === activeIndex));
+    });
+
+    document.addEventListener('click', e => {
+      if (!e.target.closest('.autocomplete-wrap')) {
+        suggestionsEl.style.display = 'none';
+      }
+    });
+
+    reflectionEl.addEventListener('input', () => {
+      const n = countWords(reflectionEl.value);
+      wordCountEl.textContent = n + ' word' + (n === 1 ? '' : 's');
+      wordCountEl.className = n >= 25 ? 'ok' : 'warn';
+      updateSubmitState();
+    });
+  </script>
+</body>
+</html>

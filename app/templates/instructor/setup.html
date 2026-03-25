@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}New Course Setup — Attendance Tracker{% endblock %}
+
+{% block content %}
+<h1>Set Up a New Course</h1>
+<p class="muted mt-1" style="margin-bottom:1.5rem;">
+  Upload your DuckWeb class list PDF. Student names will be extracted automatically.
+  No UO IDs or email addresses are stored.
+</p>
+
+<div class="card">
+  <form method="post" enctype="multipart/form-data">
+
+    <h2>1. Upload Class List</h2>
+    <label for="class_list_pdf">DuckWeb Class List — PDF or Excel</label>
+    <input type="file" id="class_list_pdf" name="class_list_pdf" accept=".pdf,.xls,.xlsx" required>
+    <p class="muted" style="margin-top:-0.75rem; margin-bottom:0.5rem;">
+      DuckWeb &rsaquo; Course Administration Center &rsaquo; Select View Class List &rsaquo;
+      Download Class List to Excel <em>or</em> print a PDF of this page.
+    </p>
+    <p class="muted" style="margin-bottom:1rem;">
+      <strong>Privacy:</strong> Only student names will be imported from this document.
+      UO IDs and email addresses are never stored.
+    </p>
+
+    <h2 style="margin-top:1.5rem;">2. Attendance Policy</h2>
+    <div class="grid-3">
+      <div>
+        <label for="free_absences">Free absences (no penalty)</label>
+        <input type="number" id="free_absences" name="free_absences" value="2" min="0" max="10">
+      </div>
+      <div>
+        <label for="deduction_per_absence">% deducted per excess absence</label>
+        <input type="number" id="deduction_per_absence" name="deduction_per_absence" value="5" min="0" max="100" step="0.5">
+      </div>
+      <div>
+        <label for="default_window_minutes">Default session window (minutes)</label>
+        <input type="number" id="default_window_minutes" name="default_window_minutes" value="10" min="1" max="120">
+      </div>
+    </div>
+
+    <p class="muted" style="margin-top:-0.5rem; margin-bottom:1rem;">
+      Default: 2 free absences, then &minus;5% from final grade per additional miss.
+      No hard ceiling &mdash; students aren&rsquo;t incentivized to hit a limit.
+    </p>
+
+    <h2 style="margin-top:1.5rem;">3. Reflection Prompt (optional)</h2>
+    <label for="reflection_prompt">
+      Custom prompt shown to students each session
+      <span class="muted">(leave blank to use the default)</span>
+    </label>
+    <textarea id="reflection_prompt" name="reflection_prompt" placeholder="Default: Share one insight you learned in today's class and describe how you might apply it in an assignment or project you are working on."></textarea>
+
+    <div class="flex gap-2">
+      <button type="submit" class="btn btn-primary">Create Course</button>
+      <a href="{{ url_for('instructor.index') }}" class="btn btn-ghost">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

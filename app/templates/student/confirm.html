@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Attendance Confirmed — {{ course.course_name }}</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --uo-green:     #007030;
+      --legacy-green: #104735;
+      --uo-yellow:    #FEE11A;
+      --berry:        #8D1D58;
+      --dark-blue:    #004F6E;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f5f6f4;
+      color: #1c1c1c;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+    .card {
+      background: #fff;
+      border-radius: 6px;
+      border-top: 4px solid var(--uo-green);
+      padding: 2rem 1.75rem;
+      max-width: 480px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 2px 16px rgba(0,0,0,0.07);
+    }
+    .icon { font-size: 3.5rem; margin-bottom: 1rem; color: var(--uo-green); }
+    h1 { font-size: 1.4rem; margin-bottom: 0.5rem; color: var(--legacy-green); }
+    p  { color: #4D5859; font-size: 0.95rem; line-height: 1.6; }
+    .name { font-weight: 700; color: var(--legacy-green); }
+    .flag-note {
+      margin-top: 1.25rem;
+      background: #fef9cc;
+      border-left: 4px solid var(--uo-yellow);
+      border-radius: 0 4px 4px 0;
+      padding: 0.75rem 1rem;
+      font-size: 0.85rem;
+      color: #5c3d00;
+      text-align: left;
+    }
+    .already {
+      background: #cce3ed;
+      border-left: 4px solid var(--dark-blue);
+      border-radius: 0 4px 4px 0;
+      padding: 1rem;
+      font-size: 0.9rem;
+      color: var(--dark-blue);
+      margin-top: 1rem;
+      text-align: left;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    {% if already_submitted %}
+      <div class="icon">&#8505;</div>
+      <h1>Already Submitted</h1>
+      <p>
+        <span class="name">{{ student.full_name }}</span>, your attendance for
+        <strong>{{ course.course_name }}</strong> session #{{ session.session_number }}
+        was already recorded.
+      </p>
+      <div class="already">
+        Duplicate submissions are not allowed. If you believe this is an error, please speak with your instructor.
+      </div>
+    {% else %}
+      <div class="icon">&#10003;</div>
+      <h1>Attendance Recorded</h1>
+      <p>
+        Thank you, <span class="name">{{ student.full_name }}</span>.<br>
+        You're marked present for <strong>{{ course.course_name }}</strong>,
+        Session #{{ session.session_number }} on
+        {{ session.session_date.strftime('%B %-d, %Y') }}.
+      </p>
+
+      {% if flags %}
+      <div class="flag-note">
+        <strong>Note:</strong> Your submission was flagged for instructor review
+        ({{ flags | map('replace', '_', ' ') | join(', ') }}).
+        This doesn't affect your attendance automatically — your instructor will review it.
+      </div>
+      {% endif %}
+    {% endif %}
+  </div>
+</body>
+</html>

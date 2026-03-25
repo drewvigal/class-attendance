@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+{% block title %}{{ course.course_name }} — Attendance Tracker{% endblock %}
+
+{% block content %}
+{% set day_labels = {'T':'Tue','R':'Thu','M':'Mon','W':'Wed','F':'Fri'} %}
+
+<div class="flex justify-between" style="margin-bottom:1rem; flex-wrap:wrap; gap:0.5rem;">
+  <div>
+    <h1 style="margin-bottom:0.25rem;">{{ course.course_name }}</h1>
+    <span class="muted">
+      CRN {{ course.crn }} &nbsp;|&nbsp; {{ course.term }} &nbsp;|&nbsp;
+      {% for d in course.meeting_days.split(',') %}{{ day_labels.get(d, d) }}{% if not loop.last %}/{% endif %}{% endfor %}
+      {{ course.meeting_time }} &nbsp;|&nbsp; {{ students|length }} students
+    </span>
+  </div>
+  <div class="flex gap-1">
+    <a href="{{ url_for('instructor.export', course_id=course.id) }}" class="btn btn-success btn-sm">Export .xlsx</a>
+    <a href="{{ url_for('instructor.index') }}" class="btn btn-ghost btn-sm">&larr; All Courses</a>
+  </div>
+</div>
+
+<!-- Permanent QR Code card -->
+<div class="card" style="display:flex; align-items:center; gap:1.5rem; flex-wrap:wrap;">
+  <div style="flex-shrink:0;">
+    <img src="{{ course_qr }}" alt="Course Check-In QR Code"
+         style="width:140px; height:140px; display:block; border-radius:4px;">
+  </div>
+  <div style="flex:1; min-width:200px;">
+    <h2 style="margin-bottom:0.3rem;">Permanent Check-In QR Code</h2>
+    <p class="muted" style="font-size:0.85rem; margin-bottom:0.6rem;">
+      Print this once and reuse every session. Students scan it when the attendance window is open.
+    </p>
+    <div style="background:#f4f6f8; border-radius:6px; padding:0.5rem 0.75rem;
+                font-family:monospace; font-size:0.75rem; word-break:break-all;
+                margin-bottom:0.75rem; color:#374151;">
+      {{ course_url }}
+    </div>
+    <a href="{{ course_qr }}" download="checkin_qr_{{ course.crn }}_{{ course.term_code }}.png"
+       class="btn btn-primary btn-sm">&#8659; Download QR</a>
+  </div>
+</div>
+
+<!-- Open new session card -->
+<div class="card">
+  <h2>Open New Session</h2>
+  <form method="post" action="{{ url_for('instructor.new_session', course_id=course.id) }}"
+        style="display:flex; gap:1rem; flex-wrap:wrap; align-items:flex-end;">
+    <div style="flex:1; min-width:160px;">
+      <label for="session_date">Date</label>
+      <input type="date" id="session_date" name="session_date"
+             value="{{ today }}" style="margin-bottom:0;">
+    </div>
+    <div style="flex:1; min-width:140px;">
+      <label for="window_minutes">Window (min)</label>
+      <input type="number" id="window_minutes" name="window_minutes"
+             value="{{ course.default_window_minutes }}" min="1" max="120" style="margin-bottom:0;">
+    </div>
+    <div style="flex:2; min-width:240px;">
+      <label for="reflection_prompt">Custom prompt <span class="muted">(optional)</span></label>
+      <input type="text" id="reflection_prompt" name="reflection_prompt"
+             placeholder="Leave blank for course default" style="margin-bottom:0;">
+    </div>
+    <div>
+      <button type="submit" class="btn btn-primary">Open Session</button>
+    </div>
+  </form>
+</div>
+
+<!-- Recent sessions -->
+{% if sessions %}
+<div class="card">
+  <h2>Sessions</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>#</th><th>Date</th><th>Status</th><th>Present</th><th>Absent</th><th>Flagged</th><th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in sessions|reverse %}
+      {% set records = s.attendance_records %}
+      {% set present_count = records|selectattr('status','equalto','present')|list|length %}
+      {% set total = students|length %}
+      {% set absent_count = total - present_count %}
+      {% set flagged_count = records|selectattr('flag_reasons')|list|length %}
+      <tr>
+        <td>{{ s.session_number }}</td>
+        <td>{{ s.session_date.strftime('%a %b %-d') }}</td>
+        <td>
+          {% if s.status_label == 'open' %}
+            <span class="badge badge-green">Open</span>
+          {% elif s.status_label == 'closed' %}
+            <span class="badge badge-gray">Closed</span>
+          {% else %}
+            <span class="badge badge-yellow">Pending</span>
+          {% endif %}
+        </td>
+        <td><span class="badge badge-green">{{ present_count }}</span></td>
+        <td><span class="badge badge-red">{{ absent_count }}</span></td>
+        <td>
+          {% if flagged_count > 0 %}
+            <span class="badge badge-yellow">{{ flagged_count }}</span>
+          {% else %}—{% endif %}
+        </td>
+        <td>
+          <a href="{{ url_for('instructor.session_detail', course_id=course.id, session_id=s.id) }}"
+             class="btn btn-ghost btn-sm">View</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+<!-- Attendance grid -->
+{% if sessions and students %}
+<div class="card">
+  <h2>Attendance Overview</h2>
+  <div class="attendance-grid">
+    <table style="font-size:0.8rem;">
+      <thead>
+        <tr>
+          <th style="min-width:160px;">Student</th>
+          {% for s in sessions %}
+          <th class="att-cell" style="min-width:52px; font-size:0.7rem;">
+            #{{ s.session_number }}<br>
+            <span style="font-weight:400;">{{ s.session_date.strftime('%-m/%-d') }}</span>
+          </th>
+          {% endfor %}
+          <th>Absences</th>
+          <th>Free</th>
+          <th>Excess</th>
+          <th>Deduction</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for stat in student_stats %}
+        {% set student = stat.student %}
+        <tr>
+          <td style="font-weight:500;">
+            {% if stat.over_limit %}
+              <span style="color:var(--red);">&#9888; </span>
+            {% elif stat.at_limit %}
+              <span style="color:var(--yellow);">&#9888; </span>
+            {% endif %}
+            {{ student.display_name }}
+          </td>
+          {% for s in sessions %}
+            {% set record = matrix.get(student.id, {}).get(s.id) %}
+            {% if record and record.status == 'present' %}
+              {% if record.flag_list %}
+                <td class="att-cell att-flagged" title="{{ record.flag_list|join(', ') }}">P*</td>
+              {% else %}
+                <td class="att-cell att-present">P</td>
+              {% endif %}
+            {% else %}
+              <td class="att-cell att-absent">A</td>
+            {% endif %}
+          {% endfor %}
+          <td class="att-cell {% if stat.over_limit %}att-absent{% elif stat.at_limit %}att-flagged{% endif %}">
+            {{ stat.absences }}
+          </td>
+          <td class="att-cell">{{ course.free_absences }}</td>
+          <td class="att-cell {% if stat.excess > 0 %}att-absent{% endif %}">{{ stat.excess }}</td>
+          <td class="att-cell {% if stat.deduction > 0 %}att-absent{% endif %}">
+            {% if stat.deduction > 0 %}-{{ stat.deduction|round(1) }}%{% else %}—{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="muted mt-1" style="font-size:0.75rem;">
+    P = Present &nbsp; A = Absent &nbsp; P* = Present with flag (instructor review needed) &nbsp;
+    &#9888; = at or over free-absence limit
+  </p>
+</div>
+{% endif %}
+
+{% endblock %}
