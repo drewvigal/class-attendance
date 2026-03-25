@@ -40,71 +40,145 @@ def index():
 @bp.route("/setup", methods=["GET", "POST"])
 def setup():
     if request.method == "POST":
-        upload = request.files.get("class_list_pdf")
-        allowed = (".pdf", ".xls", ".xlsx")
-        if not upload or not any(upload.filename.lower().endswith(ext) for ext in allowed):
-            flash("Please upload a DuckWeb class list PDF or Excel (.xls) file.", "error")
-            return redirect(url_for("instructor.setup"))
-
-        suffix = os.path.splitext(upload.filename)[1].lower()
-        import tempfile
-        with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
-            upload.save(tmp.name)
-            tmp_path = tmp.name
-
-        try:
-            parsed = parse_class_list(tmp_path)
-        except Exception as e:
-            flash(f"Could not parse PDF: {e}", "error")
-            return redirect(url_for("instructor.setup"))
-        finally:
-            os.unlink(tmp_path)
-
-        if not parsed["students"]:
-            flash("No students found in the PDF. Please check the file.", "error")
-            return redirect(url_for("instructor.setup"))
-
-        # Policy from form (instructor can override defaults)
-        free_absences = int(request.form.get("free_absences", 2))
-        deduction = float(request.form.get("deduction_per_absence", 5.0))
+        mode = request.form.get("setup_mode", "file")
+        free_absences  = int(request.form.get("free_absences", 2))
+        deduction      = float(request.form.get("deduction_per_absence", 5.0))
         window_minutes = int(request.form.get("default_window_minutes", 10))
-        custom_prompt = request.form.get("reflection_prompt", "").strip()
+        custom_prompt  = request.form.get("reflection_prompt", "").strip()
 
-        course = Course(
-            crn=parsed["crn"],
-            course_name=parsed["course_name"],
-            term=parsed["term"],
-            term_code=parsed["term_code"],
-            credits=parsed["credits"],
-            meeting_days=parsed["meeting_days"],
-            meeting_time=parsed["meeting_time"],
-            location=parsed["location"],
-            instructor_name=parsed["instructor_name"],
-            free_absences=free_absences,
-            deduction_per_absence=deduction,
-            default_window_minutes=window_minutes,
-            token=secrets.token_urlsafe(32),
-        )
+        if mode == "manual":
+            # ── Manual name entry path ──────────────────────────────────────
+            course_name = request.form.get("manual_course_name", "").strip()
+            crn         = request.form.get("manual_crn", "").strip() or "N/A"
+            term        = request.form.get("manual_term", "").strip()
+            names_raw   = request.form.get("manual_names", "")
+
+            if not course_name:
+                flash("Please enter a course name.", "error")
+                return redirect(url_for("instructor.setup"))
+            if not term:
+                flash("Please enter a term (e.g. Spring 2026).", "error")
+                return redirect(url_for("instructor.setup"))
+
+            students_parsed = _parse_name_list(names_raw)
+            if not students_parsed:
+                flash("No valid student names found. Please check your list.", "error")
+                return redirect(url_for("instructor.setup"))
+
+            course = Course(
+                crn=crn,
+                course_name=course_name,
+                term=term,
+                term_code=term.replace(" ", ""),
+                credits=None,
+                meeting_days="",
+                meeting_time="",
+                location="",
+                instructor_name="",
+                free_absences=free_absences,
+                deduction_per_absence=deduction,
+                default_window_minutes=window_minutes,
+                token=secrets.token_urlsafe(32),
+            )
+
+        else:
+            # ── DuckWeb file upload path ────────────────────────────────────
+            upload = request.files.get("class_list_pdf")
+            allowed = (".pdf", ".xls", ".xlsx")
+            if not upload or not any(upload.filename.lower().endswith(ext) for ext in allowed):
+                flash("Please upload a DuckWeb class list PDF or Excel (.xls) file.", "error")
+                return redirect(url_for("instructor.setup"))
+
+            suffix = os.path.splitext(upload.filename)[1].lower()
+            import tempfile
+            with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
+                upload.save(tmp.name)
+                tmp_path = tmp.name
+
+            try:
+                parsed = parse_class_list(tmp_path)
+            except Exception as e:
+                flash(f"Could not parse file: {e}", "error")
+                return redirect(url_for("instructor.setup"))
+            finally:
+                os.unlink(tmp_path)
+
+            if not parsed["students"]:
+                flash("No students found in the file. Please check it and try again.", "error")
+                return redirect(url_for("instructor.setup"))
+
+            students_parsed = parsed["students"]
+            course = Course(
+                crn=parsed["crn"],
+                course_name=parsed["course_name"],
+                term=parsed["term"],
+                term_code=parsed["term_code"],
+                credits=parsed["credits"],
+                meeting_days=parsed["meeting_days"],
+                meeting_time=parsed["meeting_time"],
+                location=parsed["location"],
+                instructor_name=parsed["instructor_name"],
+                free_absences=free_absences,
+                deduction_per_absence=deduction,
+                default_window_minutes=window_minutes,
+                token=secrets.token_urlsafe(32),
+            )
+
         if custom_prompt:
             course.default_reflection_prompt = custom_prompt
 
         db.session.add(course)
-        db.session.flush()  # get course.id
+        db.session.flush()
 
-        for s in parsed["students"]:
-            student = Student(
+        for s in students_parsed:
+            db.session.add(Student(
                 course_id=course.id,
                 last_name=s["last_name"],
                 first_name=s["first_name"],
                 middle_initial=s.get("middle_initial", ""),
-            )
-            db.session.add(student)
+            ))
 
         db.session.commit()
-        flash(f"Course '{course.course_name}' set up with {len(parsed['students'])} students.", "success")
+        flash(f"Course '{course.course_name}' set up with {len(students_parsed)} students.", "success")
         return redirect(url_for("instructor.course", course_id=course.id))
 
     return render_template("instructor/setup.html")
+
+
+def _parse_name_list(raw_text):
+    """
+    Parse a pasted list of student names (one per line).
+    Accepts:
+      - "Last, First"          → last=Last, first=First
+      - "Last, First Middle"   → last=Last, first=First, middle=M
+      - "First Last"           → last=Last, first=First
+      - "First Middle Last"    → last=Last, first=First, middle=M
+    Returns a list of dicts with last_name, first_name, middle_initial.
+    """
+    students = []
+    for line in raw_text.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        if "," in line:
+            # "Last, First [Middle]"
+            parts = line.split(",", 1)
+            last = parts[0].strip().title()
+            rest = parts[1].strip().split()
+            if not rest:
+                continue
+            first = rest[0].title()
+            middle = rest[1][0].upper() if len(rest) > 1 else ""
+        else:
+            # "First [Middle] Last"
+            parts = line.split()
+            if len(parts) < 2:
+                continue
+            first = parts[0].title()
+            last  = parts[-1].title()
+            middle = parts[1][0].upper() if len(parts) > 2 else ""
+        students.append({"last_name": last, "first_name": first, "middle_initial": middle})
+    return students
 
 
 @bp.route("/course/<int:course_id>")

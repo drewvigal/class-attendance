@@ -4,26 +4,77 @@
 {% block content %}
 <h1>Set Up a New Course</h1>
 <p class="muted mt-1" style="margin-bottom:1.5rem;">
-  Upload your DuckWeb class list (PDF or Excel). Student names will be extracted automatically.
+  Import your class roster from DuckWeb, or paste student names manually.
   No UO IDs or email addresses are stored.
 </p>
 
 <div class="card">
-  <form method="post" enctype="multipart/form-data">
+  <form method="post" enctype="multipart/form-data" id="setup-form">
 
-    <h2>1. Upload Class List</h2>
-    <label for="class_list_pdf">DuckWeb Class List — PDF or Excel</label>
-    <input type="file" id="class_list_pdf" name="class_list_pdf" accept=".pdf,.xls,.xlsx" required>
-    <p class="muted" style="margin-top:-0.75rem; margin-bottom:0.5rem;">
-      DuckWeb &rsaquo; Course Administration Center &rsaquo; Select View Class List &rsaquo;
-      Download Class List to Excel <em>or</em> print a PDF of this page.
-    </p>
-    <p class="muted" style="margin-bottom:1rem;">
-      <strong>Privacy:</strong> Only student names will be imported from this document.
-      UO IDs and email addresses are never stored.
-    </p>
+    <!-- Tab toggle -->
+    <div style="display:flex; gap:0; margin-bottom:1.5rem; border-bottom:2px solid #e5e7eb;">
+      <button type="button" id="tab-file" onclick="switchTab('file')"
+        style="padding:0.5rem 1.25rem; border:none; background:none; cursor:pointer;
+               font-size:0.9rem; font-weight:600; color:var(--uo-green);
+               border-bottom:2px solid var(--uo-green); margin-bottom:-2px;">
+        Upload DuckWeb File
+      </button>
+      <button type="button" id="tab-manual" onclick="switchTab('manual')"
+        style="padding:0.5rem 1.25rem; border:none; background:none; cursor:pointer;
+               font-size:0.9rem; font-weight:500; color:#6b7280;
+               border-bottom:2px solid transparent; margin-bottom:-2px;">
+        Paste Names Manually
+      </button>
+    </div>
 
-    <h2 style="margin-top:1.5rem;">2. Attendance Policy</h2>
+    <!-- Section A: DuckWeb file upload -->
+    <div id="section-file">
+      <h2>1. Upload Class List</h2>
+      <label for="class_list_pdf">DuckWeb Class List — PDF or Excel</label>
+      <input type="file" id="class_list_pdf" name="class_list_pdf" accept=".pdf,.xls,.xlsx">
+      <p class="muted" style="margin-top:-0.75rem; margin-bottom:0.5rem;">
+        DuckWeb &rsaquo; Course Administration Center &rsaquo; Select View Class List &rsaquo;
+        Download Class List to Excel <em>or</em> print a PDF of this page.
+      </p>
+      <p class="muted" style="margin-bottom:1rem;">
+        <strong>Privacy:</strong> Only student names will be imported.
+        UO IDs and email addresses are never stored.
+      </p>
+    </div>
+
+    <!-- Section B: Manual name entry -->
+    <div id="section-manual" style="display:none;">
+      <h2>1. Course Info</h2>
+      <div class="grid-3" style="margin-bottom:1rem;">
+        <div style="grid-column:span 2;">
+          <label for="manual_course_name">Course Name <span style="color:var(--red);">*</span></label>
+          <input type="text" id="manual_course_name" name="manual_course_name"
+                 placeholder="e.g. JCOM 332 Public Affairs Journalism">
+        </div>
+        <div>
+          <label for="manual_crn">CRN <span class="muted">(optional)</span></label>
+          <input type="text" id="manual_crn" name="manual_crn" placeholder="e.g. 32468">
+        </div>
+        <div>
+          <label for="manual_term">Term <span style="color:var(--red);">*</span></label>
+          <input type="text" id="manual_term" name="manual_term" placeholder="e.g. Spring 2026">
+        </div>
+      </div>
+
+      <h2>2. Student Names</h2>
+      <label for="manual_names">
+        Paste or type one name per line
+        <span class="muted">(accepts "Last, First" or "First Last" format)</span>
+      </label>
+      <textarea id="manual_names" name="manual_names" rows="10"
+                placeholder="Barbarino, Vinnie&#10;Washington, Freddie&#10;Epstein, Juan&#10;or&#10;Vinnie Barbarino&#10;Freddie Washington"></textarea>
+      <p class="muted" style="margin-top:-0.5rem; margin-bottom:1rem; font-size:0.8rem;">
+        Blank lines are ignored. Names are stored as entered — no UO IDs or emails needed.
+      </p>
+    </div>
+
+    <!-- Shared: Attendance Policy + Reflection Prompt -->
+    <h2 style="margin-top:1.5rem;" id="policy-heading">2. Attendance Policy</h2>
     <div class="grid-3">
       <div>
         <label for="free_absences">Free absences (no penalty)</label>
@@ -38,18 +89,21 @@
         <input type="number" id="default_window_minutes" name="default_window_minutes" value="10" min="1" max="120">
       </div>
     </div>
-
     <p class="muted" style="margin-top:-0.5rem; margin-bottom:1rem;">
       Default: 2 free absences, then &minus;5% from final grade per additional miss.
       No hard ceiling &mdash; students aren&rsquo;t incentivized to hit a limit.
     </p>
 
-    <h2 style="margin-top:1.5rem;">3. Reflection Prompt (optional)</h2>
+    <h2 style="margin-top:1.5rem;" id="prompt-heading">3. Reflection Prompt (optional)</h2>
     <label for="reflection_prompt">
       Custom prompt shown to students each session
       <span class="muted">(leave blank to use the default)</span>
     </label>
-    <textarea id="reflection_prompt" name="reflection_prompt" placeholder="Default: Share one insight you learned in today's class and describe how you might apply it in an assignment or project you are working on."></textarea>
+    <textarea id="reflection_prompt" name="reflection_prompt"
+              placeholder="Default: Share one insight you learned in today's class and describe how you might apply it in an assignment or project you are working on."></textarea>
+
+    <!-- Hidden field to track which tab was active on submit -->
+    <input type="hidden" id="setup_mode" name="setup_mode" value="file">
 
     <div class="flex gap-2">
       <button type="submit" class="btn btn-primary">Create Course</button>
@@ -57,4 +111,28 @@
     </div>
   </form>
 </div>
+
+<script>
+function switchTab(tab) {
+  var isFile = (tab === 'file');
+  document.getElementById('section-file').style.display   = isFile ? '' : 'none';
+  document.getElementById('section-manual').style.display = isFile ? 'none' : '';
+  document.getElementById('setup_mode').value = tab;
+
+  // Update heading numbers
+  document.getElementById('policy-heading').textContent = isFile ? '2. Attendance Policy' : '3. Attendance Policy';
+  document.getElementById('prompt-heading').textContent  = isFile ? '3. Reflection Prompt (optional)' : '4. Reflection Prompt (optional)';
+
+  // Tab styles
+  var fileBtn   = document.getElementById('tab-file');
+  var manualBtn = document.getElementById('tab-manual');
+  fileBtn.style.color         = isFile ? 'var(--uo-green)' : '#6b7280';
+  fileBtn.style.fontWeight    = isFile ? '600' : '500';
+  fileBtn.style.borderBottom  = isFile ? '2px solid var(--uo-green)' : '2px solid transparent';
+  manualBtn.style.color        = isFile ? '#6b7280' : 'var(--uo-green)';
+  manualBtn.style.fontWeight   = isFile ? '500' : '600';
+  manualBtn.style.borderBottom = isFile ? '2px solid transparent' : '2px solid var(--uo-green)';
+}
+</script>
+
 {% endblock %}
