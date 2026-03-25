@@ -470,6 +470,11 @@ def delete_session(course_id, session_id):
     return redirect(url_for("instructor.course", course_id=course_id))
 
 
+@bp.route("/faculty-guide")
+def faculty_guide():
+    return render_template("instructor/faculty_guide.html")
+
+
 @bp.route("/course/<int:course_id>/delete", methods=["POST"])
 def delete_course(course_id):
     course = Course.query.get_or_404(course_id)

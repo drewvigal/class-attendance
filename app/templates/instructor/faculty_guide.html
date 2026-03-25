@@ -1,0 +1,437 @@
+{% extends "base.html" %}
+{% block title %}Faculty Guide — Attendance Tracker{% endblock %}
+
+{% block content %}
+<style>
+  /* ── Faculty Guide local styles ─────────────────────────────────────── */
+  .guide-hero {
+    border-top: 4px solid var(--uo-green);
+    background: var(--legacy-green);
+    color: #fff;
+    border-radius: 6px;
+    padding: 2rem 2rem 1.75rem;
+    margin-bottom: 1.5rem;
+  }
+  .guide-hero h1 {
+    color: #fff;
+    font-size: 1.75rem;
+    margin-bottom: 0.4rem;
+  }
+  .guide-hero p {
+    color: rgba(255,255,255,0.82);
+    font-size: 0.95rem;
+    max-width: 680px;
+  }
+
+  .guide-section h2 {
+    color: var(--legacy-green);
+    font-size: 1.2rem;
+    margin-bottom: 0.9rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 2px solid var(--light-gray);
+  }
+
+  /* ── Video placeholder ───────────────────────────────────────────────── */
+  .video-placeholder {
+    border: 3px dashed var(--uo-yellow);
+    background: #fffef0;
+    border-radius: 8px;
+    text-align: center;
+    padding: 2.5rem 1.5rem;
+    margin: 0.5rem 0 0.25rem;
+  }
+  .video-placeholder .video-icon {
+    font-size: 2.5rem;
+    line-height: 1;
+    margin-bottom: 0.75rem;
+    display: block;
+    /* Simple play-button triangle using CSS — no emoji dependency */
+    width: 56px;
+    height: 56px;
+    background: var(--uo-green);
+    border-radius: 50%;
+    margin: 0 auto 0.85rem;
+    position: relative;
+  }
+  .video-placeholder .video-icon::after {
+    content: "";
+    position: absolute;
+    left: 58%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    border-style: solid;
+    border-width: 10px 0 10px 18px;
+    border-color: transparent transparent transparent #fff;
+  }
+  .video-placeholder .video-label {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--legacy-green);
+    margin-bottom: 0.35rem;
+  }
+  .video-placeholder .video-note {
+    font-size: 0.85rem;
+    color: var(--muted-fg);
+  }
+  /* ── TODO marker for Andrew ──────────────────────────────────────────── */
+  /* Replace the entire .video-placeholder block with an <iframe> embed.   */
+  /* Example: <iframe width="100%" height="360"                             */
+  /*   src="https://www.youtube.com/embed/YOUR_VIDEO_ID"                   */
+  /*   frameborder="0" allowfullscreen></iframe>                            */
+
+  /* ── Feature list ───────────────────────────────────────────────────── */
+  .feature-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .feature-list li {
+    padding: 0.45rem 0 0.45rem 1.6rem;
+    position: relative;
+    font-size: 0.925rem;
+    border-bottom: 1px solid var(--light-gray);
+  }
+  .feature-list li:last-child { border-bottom: none; }
+  .feature-list li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--uo-green);
+  }
+
+  /* ── Numbered steps ─────────────────────────────────────────────────── */
+  .step-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    counter-reset: steps;
+  }
+  .step-list li {
+    counter-increment: steps;
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--light-gray);
+    font-size: 0.925rem;
+  }
+  .step-list li:last-child { border-bottom: none; }
+  .step-num {
+    flex-shrink: 0;
+    width: 2rem;
+    height: 2rem;
+    background: var(--legacy-green);
+    color: #fff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.85rem;
+  }
+  .step-body { flex: 1; padding-top: 0.25rem; }
+  .step-body strong { color: var(--legacy-green); }
+  .step-body .step-tip {
+    display: block;
+    margin-top: 0.3rem;
+    font-size: 0.82rem;
+    color: var(--muted-fg);
+  }
+
+  /* ── Deploy steps ───────────────────────────────────────────────────── */
+  .deploy-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    counter-reset: deploy;
+  }
+  .deploy-list li {
+    counter-increment: deploy;
+    padding: 0.6rem 0 0.6rem 2.5rem;
+    position: relative;
+    font-size: 0.925rem;
+    border-bottom: 1px solid var(--light-gray);
+  }
+  .deploy-list li:last-child { border-bottom: none; }
+  .deploy-list li::before {
+    content: counter(deploy);
+    position: absolute;
+    left: 0;
+    top: 0.55rem;
+    width: 1.6rem;
+    height: 1.6rem;
+    background: var(--uo-green);
+    color: #fff;
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-align: center;
+    line-height: 1.6rem;
+  }
+  .deploy-list code {
+    background: #eef3ee;
+    color: var(--legacy-green);
+    padding: 0.1rem 0.4rem;
+    border-radius: 3px;
+    font-size: 0.85rem;
+    font-family: "Courier New", monospace;
+  }
+
+  /* ── Privacy grid ───────────────────────────────────────────────────── */
+  .privacy-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+  }
+  .privacy-item {
+    background: #f5f6f4;
+    border-left: 3px solid var(--uo-green);
+    border-radius: 4px;
+    padding: 0.65rem 0.85rem;
+    font-size: 0.875rem;
+  }
+  .privacy-item strong {
+    display: block;
+    color: var(--legacy-green);
+    margin-bottom: 0.2rem;
+  }
+  @media (max-width: 640px) {
+    .privacy-grid { grid-template-columns: 1fr; }
+  }
+
+  /* ── URL placeholder highlight ──────────────────────────────────────── */
+  .url-placeholder {
+    background: #fef9cc;
+    color: #5c3d00;
+    padding: 0.15rem 0.45rem;
+    border-radius: 3px;
+    font-family: "Courier New", monospace;
+    font-size: 0.85rem;
+    font-weight: 700;
+    border: 1px solid #e8d060;
+  }
+</style>
+
+<!-- ── Hero ─────────────────────────────────────────────────────────────── -->
+<div class="guide-hero">
+  <h1>Faculty Guide</h1>
+  <p>Everything you need to set up and run the Class Attendance Tracker in your UO SOJC courses.</p>
+</div>
+
+<!-- ── 1. About This Tool ───────────────────────────────────────────────── -->
+<div class="card guide-section">
+  <h2>About This Tool</h2>
+  <p>
+    This is an open-source attendance tracker built specifically for UO School of Journalism and Communication faculty.
+    It helps you record who showed up and collect a short learning reflection from each student as proof of attendance —
+    all in one quick workflow.
+  </p>
+  <p class="mt-2">
+    The tool is privacy-first: it stores only student names, not UO IDs or email addresses.
+    Each faculty member runs their own isolated database instance, so your course data is never shared with others.
+    Built and maintained by Andrew DeVigal.
+  </p>
+</div>
+
+<!-- ── 2. Video Placeholder ─────────────────────────────────────────────── -->
+<div class="card guide-section">
+  <h2>Walkthrough Video</h2>
+  <!-- ═══════════════════════════════════════════════════════════════════
+       TODO (Andrew): Replace this entire .video-placeholder block with
+       a YouTube or Vimeo embed once you have the link. Example:
+
+         <iframe width="100%" height="400" style="border-radius:6px;"
+           src="https://www.youtube.com/embed/YOUR_VIDEO_ID"
+           frameborder="0" allow="autoplay; encrypted-media"
+           allowfullscreen></iframe>
+  ════════════════════════════════════════════════════════════════════════ -->
+  <div class="video-placeholder">
+    <div class="video-icon" aria-hidden="true"></div>
+    <p class="video-label">Watch the walkthrough video</p>
+    <p class="video-note">(video link coming soon)</p>
+  </div>
+</div>
+
+<!-- ── 3. Features ──────────────────────────────────────────────────────── -->
+<div class="card guide-section">
+  <h2>Features</h2>
+  <ul class="feature-list">
+    <li>Import your roster from DuckWeb (PDF or Excel) — or paste names manually</li>
+    <li>Permanent per-course QR code — print it once and reuse it every session</li>
+    <li>Timed attendance window — you control when it opens and closes</li>
+    <li>Students submit a short learning reflection as proof of attendance</li>
+    <li>Anti-gaming measures: time window enforcement, duplicate detection, IP flagging, and reflection quality check</li>
+    <li>Instructor dashboard with a color-coded attendance grid across all sessions</li>
+    <li>Click any cell to manually override status: <span class="badge badge-green">P</span> Present / <span class="badge badge-red">A</span> Absent / <span class="badge badge-yellow">P*</span> Flagged</li>
+    <li>Add instructor notes to any individual submission</li>
+    <li>Configurable attendance policy — set free absences and grade deduction percentage</li>
+    <li>End-of-term Excel export with attendance grid, summary statistics, and student reflections</li>
+  </ul>
+</div>
+
+<!-- ── 4. How to Use It ─────────────────────────────────────────────────── -->
+<div class="card guide-section">
+  <h2>How to Use It (Step by Step)</h2>
+  <ol class="step-list">
+    <li>
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <strong>Go to the live tool.</strong>
+        Open <span class="url-placeholder">YOUR_RENDER_URL</span> in your browser.
+        <span class="step-tip">Bookmark this — it's your home base for all your courses.</span>
+      </div>
+    </li>
+    <li>
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <strong>Set up a new course.</strong>
+        Click <em>"+ New Course"</em> in the nav. Upload your DuckWeb class list (PDF or Excel)
+        — or switch to manual entry and paste names directly.
+      </div>
+    </li>
+    <li>
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <strong>Configure your attendance policy.</strong>
+        Set the number of free absences allowed, the grade deduction per excess absence,
+        and the default session window length.
+      </div>
+    </li>
+    <li>
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <strong>Find your permanent QR code.</strong>
+        You'll land on your Course Dashboard after setup. Your QR code is listed there — download and print it.
+        This code never changes, so you only need to print it once per course.
+      </div>
+    </li>
+    <li>
+      <div class="step-num">5</div>
+      <div class="step-body">
+        <strong>Before each class: open a new session.</strong>
+        Click <em>"Start New Session"</em> from your Course Dashboard. Do this at least 5 minutes before class starts.
+        <span class="step-tip">Render's free tier may need a moment to wake up if the app has been idle.</span>
+      </div>
+    </li>
+    <li>
+      <div class="step-num">6</div>
+      <div class="step-body">
+        <strong>Display the QR code.</strong>
+        Project it or hold up the printed copy. Students scan it and submit their reflection.
+        The attendance window is timed — submissions outside the window are rejected.
+      </div>
+    </li>
+    <li>
+      <div class="step-num">7</div>
+      <div class="step-body">
+        <strong>Monitor live check-ins.</strong>
+        The Session Detail page updates in real time. Review any flagged submissions and accept or reject them.
+        <span class="step-tip">Flags may appear for late submissions, suspected duplicates, or low-quality reflections.</span>
+      </div>
+    </li>
+    <li>
+      <div class="step-num">8</div>
+      <div class="step-body">
+        <strong>Close the session.</strong>
+        Click <em>"Close Session"</em> when class is over. The window closes automatically too, but closing manually is good practice.
+      </div>
+    </li>
+    <li>
+      <div class="step-num">9</div>
+      <div class="step-body">
+        <strong>At end of term: export your report.</strong>
+        From your Course Dashboard, click <em>"Export Excel"</em>. The file includes the full attendance grid,
+        per-student summary, and all submitted reflections.
+      </div>
+    </li>
+  </ol>
+</div>
+
+<!-- ── 5. Set Up Your Own Instance ─────────────────────────────────────── -->
+<div class="card guide-section">
+  <h2>Set Up Your Own Instance</h2>
+  <p class="muted" style="margin-bottom:1rem;">
+    Each faculty member runs their own private deployment — your students' data never touches anyone else's instance.
+    Setup takes about 15 minutes.
+  </p>
+  <ol class="deploy-list">
+    <li>
+      Go to <strong>github.com/drewvigal/class-attendance</strong> and click <em>Fork</em> to create your own copy of the repo.
+    </li>
+    <li>
+      Sign up at <strong>render.com</strong> and connect your GitHub account when prompted.
+    </li>
+    <li>
+      Click <em>New → Web Service</em> and select your forked repository.
+      Render will detect the configuration automatically.
+    </li>
+    <li>
+      Add two Environment Variables in Render's dashboard:
+      <ul style="margin-top:0.4rem; margin-left:1rem; font-size:0.875rem;">
+        <li style="margin-bottom:0.3rem;">
+          <code>ANTHROPIC_API_KEY</code> — get this from
+          <strong>console.anthropic.com</strong> (used for reflection quality checks)
+        </li>
+        <li>
+          <code>DATABASE_URL</code> — create a free PostgreSQL database at
+          <strong>neon.tech</strong> and paste the connection string here
+        </li>
+      </ul>
+    </li>
+    <li>
+      Click <em>Deploy</em>. Your private instance will be live at a unique Render URL within a few minutes.
+    </li>
+    <li>
+      Copy that Render URL and bookmark it — that's your <span class="url-placeholder">YOUR_RENDER_URL</span> from Step 1 above.
+    </li>
+  </ol>
+</div>
+
+<!-- ── 6. Privacy Notes ─────────────────────────────────────────────────── -->
+<div class="card guide-section">
+  <h2>Privacy Notes</h2>
+  <div class="privacy-grid">
+    <div class="privacy-item">
+      <strong>Names only</strong>
+      Only student names are stored — no UO ID numbers, no email addresses.
+    </div>
+    <div class="privacy-item">
+      <strong>Hashed IP addresses</strong>
+      IP addresses used for duplicate detection are hashed one-way and never stored in plain text.
+    </div>
+    <div class="privacy-item">
+      <strong>Your data, your database</strong>
+      Data lives in your own Neon PostgreSQL instance — it is never shared with other faculty deployments.
+    </div>
+    <div class="privacy-item">
+      <strong>No tracking or analytics</strong>
+      No third-party analytics, cookies, or tracking scripts are used in this tool.
+    </div>
+  </div>
+</div>
+
+<!-- ── 7. Questions / Feedback ──────────────────────────────────────────── -->
+<div class="card guide-section">
+  <h2>Questions or Feedback</h2>
+  <p>
+    Have a question, found a bug, or want to suggest a feature?
+    Contact Andrew DeVigal at
+    <!-- TODO (Andrew): Replace with your actual UO email address -->
+    <strong>[andrew's-email@uoregon.edu]</strong>.
+  </p>
+  <p class="muted mt-1">
+    Bug reports and pull requests are also welcome on GitHub at
+    <strong>github.com/drewvigal/class-attendance</strong>.
+  </p>
+</div>
+
+{% endblock %}
