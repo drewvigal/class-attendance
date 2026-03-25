@@ -160,12 +160,18 @@
             {% set record = matrix.get(student.id, {}).get(s.id) %}
             {% if record and record.status == 'present' %}
               {% if record.flag_list %}
-                <td class="att-cell att-flagged" title="{{ record.flag_list|join(', ') }}">P*</td>
+                <td class="att-cell att-flagged editable-cell"
+                    data-student="{{ student.id }}" data-session="{{ s.id }}" data-status="P*"
+                    title="Click to edit">P*</td>
               {% else %}
-                <td class="att-cell att-present">P</td>
+                <td class="att-cell att-present editable-cell"
+                    data-student="{{ student.id }}" data-session="{{ s.id }}" data-status="P"
+                    title="Click to edit">P</td>
               {% endif %}
             {% else %}
-              <td class="att-cell att-absent">A</td>
+              <td class="att-cell att-absent editable-cell"
+                  data-student="{{ student.id }}" data-session="{{ s.id }}" data-status="A"
+                  title="Click to edit">A</td>
             {% endif %}
           {% endfor %}
           <td class="att-cell {% if stat.over_limit %}att-absent{% elif stat.at_limit %}att-flagged{% endif %}">
@@ -183,9 +189,80 @@
   </div>
   <p class="muted mt-1" style="font-size:0.75rem;">
     P = Present &nbsp; A = Absent &nbsp; P* = Present with flag (instructor review needed) &nbsp;
-    &#9888; = at or over free-absence limit
+    &#9888; = at or over free-absence limit &nbsp; <em style="color:var(--uo-green);">Click any P/A/P* cell to edit it.</em>
   </p>
 </div>
 {% endif %}
+
+<!-- Attendance cell editor -->
+<div id="att-popover" style="
+  display:none; position:fixed; z-index:1000;
+  background:#fff; border:1px solid #d1d5db; border-radius:6px;
+  box-shadow:0 4px 16px rgba(0,0,0,0.12); overflow:hidden;">
+  <button class="att-opt" data-val="P"  style="display:block;width:100%;padding:0.5rem 1.2rem;border:none;background:none;cursor:pointer;font-size:0.9rem;text-align:left;">✅ P — Present</button>
+  <button class="att-opt" data-val="A"  style="display:block;width:100%;padding:0.5rem 1.2rem;border:none;background:none;cursor:pointer;font-size:0.9rem;text-align:left;">❌ A — Absent</button>
+  <button class="att-opt" data-val="P*" style="display:block;width:100%;padding:0.5rem 1.2rem;border:none;background:none;cursor:pointer;font-size:0.9rem;text-align:left;">⚠️ P* — Present (flagged)</button>
+</div>
+
+<style>
+  .editable-cell { cursor:pointer; }
+  .editable-cell:hover { outline: 2px solid var(--uo-green); outline-offset:-2px; }
+  .att-opt:hover { background:#f0fdf4; }
+</style>
+
+<script>
+(function () {
+  var popover = document.getElementById('att-popover');
+  var activeCell = null;
+  var courseId = {{ course.id }};
+
+  document.querySelectorAll('.editable-cell').forEach(function(cell) {
+    cell.addEventListener('click', function(e) {
+      e.stopPropagation();
+      activeCell = cell;
+      var rect = cell.getBoundingClientRect();
+      popover.style.display = 'block';
+      var top = rect.bottom + window.scrollY + 4;
+      var left = rect.left + window.scrollX;
+      if (left + 220 > window.innerWidth) left = window.innerWidth - 225;
+      popover.style.top = top + 'px';
+      popover.style.left = left + 'px';
+    });
+  });
+
+  document.querySelectorAll('.att-opt').forEach(function(btn) {
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      if (!activeCell) return;
+      var newStatus = btn.getAttribute('data-val');
+      var studentId = parseInt(activeCell.getAttribute('data-student'));
+      var sessionId  = parseInt(activeCell.getAttribute('data-session'));
+
+      fetch('/course/' + courseId + '/attendance/set', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({student_id: studentId, session_id: sessionId, status: newStatus})
+      })
+      .then(function(r){ return r.json(); })
+      .then(function(data) {
+        if (data.success) {
+          activeCell.textContent = newStatus;
+          activeCell.className = 'att-cell editable-cell ' +
+            (newStatus === 'P' ? 'att-present' : newStatus === 'A' ? 'att-absent' : 'att-flagged');
+          activeCell.setAttribute('data-status', newStatus);
+        }
+        popover.style.display = 'none';
+        activeCell = null;
+      })
+      .catch(function(){ popover.style.display = 'none'; activeCell = null; });
+    });
+  });
+
+  document.addEventListener('click', function() {
+    popover.style.display = 'none';
+    activeCell = null;
+  });
+})();
+</script>
 
 {% endblock %}

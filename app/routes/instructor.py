@@ -285,6 +285,56 @@ def reject_attendance(record_id):
     return redirect(request.referrer or url_for("instructor.index"))
 
 
+@bp.route("/course/<int:course_id>/attendance/set", methods=["POST"])
+def set_attendance(course_id):
+    """AJAX endpoint — manually override a single attendance cell."""
+    from flask import jsonify
+    course = Course.query.get_or_404(course_id)
+    data = request.get_json()
+    student_id = data.get("student_id")
+    session_id = data.get("session_id")
+    new_status = data.get("status")  # "P", "A", or "P*"
+
+    if new_status not in ("P", "A", "P*"):
+        return jsonify({"error": "Invalid status"}), 400
+
+    student = Student.query.filter_by(id=student_id, course_id=course_id).first_or_404()
+    session = Session.query.filter_by(id=session_id, course_id=course_id).first_or_404()
+
+    record = Attendance.query.filter_by(
+        session_id=session.id, student_id=student.id
+    ).first()
+
+    if new_status == "A":
+        if record:
+            record.status = "absent"
+            record.flag_reasons = None
+        else:
+            record = Attendance(session_id=session.id, student_id=student.id, status="absent")
+            db.session.add(record)
+    elif new_status == "P":
+        if record:
+            record.status = "present"
+            record.flag_reasons = None
+        else:
+            record = Attendance(session_id=session.id, student_id=student.id, status="present")
+            db.session.add(record)
+    elif new_status == "P*":
+        if record:
+            record.status = "present"
+            if not record.flag_reasons:
+                record.flag_reasons = "manual_flag"
+        else:
+            record = Attendance(
+                session_id=session.id, student_id=student.id,
+                status="present", flag_reasons="manual_flag"
+            )
+            db.session.add(record)
+
+    db.session.commit()
+    return jsonify({"success": True, "status": new_status})
+
+
 @bp.route("/course/<int:course_id>/export")
 def export(course_id):
     course = Course.query.get_or_404(course_id)
