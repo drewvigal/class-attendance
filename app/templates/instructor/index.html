@@ -10,7 +10,7 @@
 {% if not courses %}
 <div class="card" style="text-align:center; padding:3rem;">
   <h2 style="color:var(--muted);">No courses yet</h2>
-  <p class="muted mt-1">Upload a DuckWeb class list PDF to get started.</p>
+  <p class="muted mt-1">Upload a DuckWeb class list (PDF or Excel) to get started.</p>
   <a href="{{ url_for('instructor.setup') }}" class="btn btn-primary mt-2">Upload Class List</a>
 </div>
 {% else %}
