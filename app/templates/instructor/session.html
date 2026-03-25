@@ -190,6 +190,19 @@
 </div>
 {% endif %}
 
+<!-- Delete session -->
+<div class="card" style="border-top-color: var(--berry); margin-top: 2rem;">
+  <h2 style="color: var(--berry);">Danger Zone</h2>
+  <p class="muted" style="margin: 0.4rem 0 1rem;">
+    Permanently deletes this session and all {{ present|length + flagged|length }} submission(s) recorded for it. This cannot be undone.
+  </p>
+  <form method="post"
+        action="{{ url_for('instructor.delete_session', course_id=course.id, session_id=session.id) }}"
+        onsubmit="return confirm('Delete Session #{{ session.session_number }} ({{ session.session_date.strftime(\'%b %-d\') }}) and all its attendance records? This cannot be undone.');">
+    <button type="submit" class="btn btn-danger btn-sm">Delete This Session</button>
+  </form>
+</div>
+
 <script>
 // Auto-save note fields on blur
 document.querySelectorAll('.note-field').forEach(function(ta) {

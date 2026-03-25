@@ -385,6 +385,17 @@ def summarize_session(course_id, session_id):
     return redirect(url_for("instructor.session_detail", course_id=course_id, session_id=session_id))
 
 
+@bp.route("/course/<int:course_id>/session/<int:session_id>/delete", methods=["POST"])
+def delete_session(course_id, session_id):
+    session = Session.query.filter_by(id=session_id, course_id=course_id).first_or_404()
+    # Cascade-delete all attendance records for this session
+    Attendance.query.filter_by(session_id=session.id).delete()
+    db.session.delete(session)
+    db.session.commit()
+    flash(f"Session #{session.session_number} deleted.", "success")
+    return redirect(url_for("instructor.course", course_id=course_id))
+
+
 @bp.route("/course/<int:course_id>/delete", methods=["POST"])
 def delete_course(course_id):
     course = Course.query.get_or_404(course_id)
