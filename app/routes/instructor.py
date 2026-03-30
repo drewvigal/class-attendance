@@ -490,3 +490,90 @@ def delete_course(course_id):
     db.session.commit()
     flash(f"Course '{course.course_name}' deleted.", "success")
     return redirect(url_for("instructor.index"))
+
+
+@bp.route("/course/<int:course_id>/edit", methods=["GET", "POST"])
+def edit_course(course_id):
+    course = Course.query.get_or_404(course_id)
+    if request.method == "POST":
+        course_name = request.form.get("course_name", "").strip()
+        crn = request.form.get("crn", "").strip()
+        term = request.form.get("term", "").strip()
+        term_code = request.form.get("term_code", "").strip()
+
+        if not course_name or not crn or not term or not term_code:
+            flash("Course name, CRN, term, and term code are all required.", "error")
+            return redirect(url_for("instructor.edit_course", course_id=course_id))
+
+        course.course_name = course_name
+        course.crn = crn
+        course.term = term
+        course.term_code = term_code
+        course.free_absences = int(request.form.get("free_absences", course.free_absences))
+        course.deduction_per_absence = float(request.form.get("deduction_per_absence", course.deduction_per_absence))
+        course.default_window_minutes = int(request.form.get("default_window_minutes", course.default_window_minutes))
+        reflection_prompt = request.form.get("default_reflection_prompt", "").strip()
+        if reflection_prompt:
+            course.default_reflection_prompt = reflection_prompt
+
+        db.session.commit()
+        flash("Course details updated.", "success")
+        return redirect(url_for("instructor.course", course_id=course_id))
+
+    students = Student.query.filter_by(course_id=course.id).order_by(
+        Student.last_name, Student.first_name
+    ).all()
+    return render_template("instructor/edit_course.html", course=course, students=students)
+
+
+@bp.route("/course/<int:course_id>/student/add", methods=["POST"])
+def add_student(course_id):
+    from flask import jsonify
+    course = Course.query.get_or_404(course_id)
+    data = request.get_json()
+    first_name = (data.get("first_name") or "").strip()
+    last_name = (data.get("last_name") or "").strip()
+    middle_initial = (data.get("middle_initial") or "").strip()
+
+    if not first_name or not last_name:
+        return jsonify({"error": "First and last name are required."}), 400
+
+    student = Student(
+        course_id=course.id,
+        first_name=first_name,
+        last_name=last_name,
+        middle_initial=middle_initial,
+    )
+    db.session.add(student)
+    db.session.commit()
+    return jsonify({"id": student.id, "display_name": student.display_name,
+                    "first_name": student.first_name, "last_name": student.last_name,
+                    "middle_initial": student.middle_initial or ""})
+
+
+@bp.route("/course/<int:course_id>/student/<int:student_id>/rename", methods=["POST"])
+def rename_student(course_id, student_id):
+    from flask import jsonify
+    student = Student.query.filter_by(id=student_id, course_id=course_id).first_or_404()
+    data = request.get_json()
+    first_name = (data.get("first_name") or "").strip()
+    last_name = (data.get("last_name") or "").strip()
+    middle_initial = (data.get("middle_initial") or "").strip()
+
+    if not first_name or not last_name:
+        return jsonify({"error": "First and last name are required."}), 400
+
+    student.first_name = first_name
+    student.last_name = last_name
+    student.middle_initial = middle_initial
+    db.session.commit()
+    return jsonify({"display_name": student.display_name})
+
+
+@bp.route("/course/<int:course_id>/student/<int:student_id>/delete", methods=["POST"])
+def delete_student(course_id, student_id):
+    from flask import jsonify
+    student = Student.query.filter_by(id=student_id, course_id=course_id).first_or_404()
+    db.session.delete(student)
+    db.session.commit()
+    return jsonify({"ok": True})

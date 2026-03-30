@@ -15,6 +15,7 @@
   </div>
   <div class="flex gap-1">
     <a href="{{ url_for('instructor.export', course_id=course.id) }}" class="btn btn-success btn-sm">Export .xlsx</a>
+    <a href="{{ url_for('instructor.edit_course', course_id=course.id) }}" class="btn btn-ghost btn-sm">Edit Course</a>
     <a href="{{ url_for('instructor.index') }}" class="btn btn-ghost btn-sm">&larr; All Courses</a>
   </div>
 </div>

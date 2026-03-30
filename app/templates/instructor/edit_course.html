@@ -1,0 +1,265 @@
+{% extends "base.html" %}
+{% block title %}Edit {{ course.course_name }} — Attendance Tracker{% endblock %}
+
+{% block content %}
+
+<div class="flex justify-between" style="margin-bottom:1rem; flex-wrap:wrap; gap:0.5rem;">
+  <div>
+    <h1 style="margin-bottom:0.25rem;">Edit Course</h1>
+    <span class="muted">{{ course.course_name }}</span>
+  </div>
+  <div>
+    <a href="{{ url_for('instructor.course', course_id=course.id) }}" class="btn btn-ghost btn-sm">&larr; Back to Dashboard</a>
+  </div>
+</div>
+
+<!-- Course Details -->
+<div class="card">
+  <h2 style="margin-bottom:1rem;">Course Details</h2>
+  <form method="post" action="{{ url_for('instructor.edit_course', course_id=course.id) }}">
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">
+      <div>
+        <label for="course_name">Course Name</label>
+        <input type="text" id="course_name" name="course_name" value="{{ course.course_name }}" required>
+      </div>
+      <div>
+        <label for="crn">CRN</label>
+        <input type="text" id="crn" name="crn" value="{{ course.crn }}" required>
+      </div>
+      <div>
+        <label for="term">Term</label>
+        <input type="text" id="term" name="term" value="{{ course.term }}" placeholder="e.g. Spring 2026" required>
+      </div>
+      <div>
+        <label for="term_code">Term Code</label>
+        <input type="text" id="term_code" name="term_code" value="{{ course.term_code }}" placeholder="e.g. 26S" required>
+      </div>
+    </div>
+
+    <h3 style="margin-bottom:0.75rem; font-size:0.95rem; color:var(--muted-fg);">Attendance Policy</h3>
+    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:1rem; margin-bottom:1rem;">
+      <div>
+        <label for="free_absences">Free Absences</label>
+        <input type="number" id="free_absences" name="free_absences" value="{{ course.free_absences }}" min="0" max="20">
+      </div>
+      <div>
+        <label for="deduction_per_absence">Deduction per Absence (%)</label>
+        <input type="number" id="deduction_per_absence" name="deduction_per_absence" value="{{ course.deduction_per_absence }}" min="0" max="100" step="0.5">
+      </div>
+      <div>
+        <label for="default_window_minutes">Default Check-In Window (min)</label>
+        <input type="number" id="default_window_minutes" name="default_window_minutes" value="{{ course.default_window_minutes }}" min="1" max="120">
+      </div>
+    </div>
+
+    <div style="margin-bottom:1rem;">
+      <label for="default_reflection_prompt">Default Reflection Prompt</label>
+      <textarea id="default_reflection_prompt" name="default_reflection_prompt" rows="3"
+        style="width:100%; font-family:inherit;">{{ course.default_reflection_prompt }}</textarea>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Save Changes</button>
+  </form>
+</div>
+
+<!-- Roster Management -->
+<div class="card">
+  <h2 style="margin-bottom:1rem;">Student Roster <span class="muted" style="font-size:0.85rem; font-weight:400;">({{ students|length }} students)</span></h2>
+
+  <table id="roster-table" style="width:100%; margin-bottom:1.5rem;">
+    <thead>
+      <tr>
+        <th style="text-align:left; padding:0.4rem 0.5rem;">First Name</th>
+        <th style="text-align:left; padding:0.4rem 0.5rem;">MI</th>
+        <th style="text-align:left; padding:0.4rem 0.5rem;">Last Name</th>
+        <th style="width:140px;"></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for student in students %}
+      <tr data-student-id="{{ student.id }}" id="student-row-{{ student.id }}">
+        <td style="padding:0.3rem 0.5rem;">
+          <span class="student-display">{{ student.first_name }}</span>
+          <input class="student-edit first-name" type="text" value="{{ student.first_name }}" style="display:none; width:100%;">
+        </td>
+        <td style="padding:0.3rem 0.5rem;">
+          <span class="student-display">{{ student.middle_initial or '' }}</span>
+          <input class="student-edit middle-initial" type="text" value="{{ student.middle_initial or '' }}" maxlength="5" style="display:none; width:3rem;">
+        </td>
+        <td style="padding:0.3rem 0.5rem;">
+          <span class="student-display">{{ student.last_name }}</span>
+          <input class="student-edit last-name" type="text" value="{{ student.last_name }}" style="display:none; width:100%;">
+        </td>
+        <td style="padding:0.3rem 0.5rem; text-align:right;">
+          <span class="view-mode" style="display:inline-flex; gap:0.4rem;">
+            <button class="btn btn-ghost btn-sm edit-btn" onclick="startEdit({{ student.id }})">Edit</button>
+            <button class="btn btn-sm delete-btn" style="background:var(--berry); color:#fff;"
+                    onclick="deleteStudent({{ student.id }}, '{{ student.display_name }}')">Delete</button>
+          </span>
+          <span class="edit-mode" style="display:none; gap:0.4rem;">
+            <button class="btn btn-primary btn-sm save-btn" onclick="saveEdit({{ student.id }})">Save</button>
+            <button class="btn btn-ghost btn-sm cancel-btn" onclick="cancelEdit({{ student.id }})">Cancel</button>
+          </span>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <!-- Add student -->
+  <h3 style="font-size:0.95rem; margin-bottom:0.6rem;">Add Student</h3>
+  <div style="display:flex; gap:0.75rem; flex-wrap:wrap; align-items:flex-end;">
+    <div style="flex:2; min-width:120px;">
+      <label for="add-first">First Name</label>
+      <input type="text" id="add-first" placeholder="First" style="margin-bottom:0;">
+    </div>
+    <div style="flex:0 0 70px;">
+      <label for="add-mi">MI</label>
+      <input type="text" id="add-mi" placeholder="MI" maxlength="5" style="margin-bottom:0;">
+    </div>
+    <div style="flex:2; min-width:120px;">
+      <label for="add-last">Last Name</label>
+      <input type="text" id="add-last" placeholder="Last" style="margin-bottom:0;">
+    </div>
+    <div>
+      <button class="btn btn-primary" onclick="addStudent()">Add</button>
+    </div>
+  </div>
+  <p id="add-error" class="muted" style="color:var(--berry); font-size:0.82rem; margin-top:0.4rem; display:none;"></p>
+</div>
+
+<script>
+(function () {
+  var courseId = {{ course.id }};
+
+  window.startEdit = function(sid) {
+    var row = document.getElementById('student-row-' + sid);
+    row.querySelectorAll('.student-display').forEach(function(el){ el.style.display = 'none'; });
+    row.querySelectorAll('.student-edit').forEach(function(el){ el.style.display = ''; });
+    row.querySelector('.view-mode').style.display = 'none';
+    row.querySelector('.edit-mode').style.display = 'inline-flex';
+    row.querySelector('.first-name').focus();
+  };
+
+  window.cancelEdit = function(sid) {
+    var row = document.getElementById('student-row-' + sid);
+    row.querySelectorAll('.student-display').forEach(function(el){ el.style.display = ''; });
+    row.querySelectorAll('.student-edit').forEach(function(el){ el.style.display = 'none'; });
+    row.querySelector('.view-mode').style.display = 'inline-flex';
+    row.querySelector('.edit-mode').style.display = 'none';
+  };
+
+  window.saveEdit = function(sid) {
+    var row = document.getElementById('student-row-' + sid);
+    var firstName = row.querySelector('.first-name').value.trim();
+    var lastName  = row.querySelector('.last-name').value.trim();
+    var mi        = row.querySelector('.middle-initial').value.trim();
+
+    if (!firstName || !lastName) {
+      alert('First and last name are required.');
+      return;
+    }
+
+    fetch('/course/' + courseId + '/student/' + sid + '/rename', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({first_name: firstName, last_name: lastName, middle_initial: mi})
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(data) {
+      if (data.error) { alert(data.error); return; }
+      var displays = row.querySelectorAll('.student-display');
+      displays[0].textContent = firstName;
+      displays[1].textContent = mi;
+      displays[2].textContent = lastName;
+      cancelEdit(sid);
+    })
+    .catch(function(){ alert('Could not save. Please try again.'); });
+  };
+
+  window.deleteStudent = function(sid, name) {
+    if (!confirm('Delete ' + name + '? This will also remove all their attendance records.')) return;
+    fetch('/course/' + courseId + '/student/' + sid + '/delete', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'}
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(data) {
+      if (data.ok) {
+        var row = document.getElementById('student-row-' + sid);
+        row.parentNode.removeChild(row);
+      } else {
+        alert('Could not delete student.');
+      }
+    })
+    .catch(function(){ alert('Could not delete. Please try again.'); });
+  };
+
+  window.addStudent = function() {
+    var first = document.getElementById('add-first').value.trim();
+    var last  = document.getElementById('add-last').value.trim();
+    var mi    = document.getElementById('add-mi').value.trim();
+    var errEl = document.getElementById('add-error');
+
+    if (!first || !last) {
+      errEl.textContent = 'First and last name are required.';
+      errEl.style.display = '';
+      return;
+    }
+    errEl.style.display = 'none';
+
+    fetch('/course/' + courseId + '/student/add', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({first_name: first, last_name: last, middle_initial: mi})
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(data) {
+      if (data.error) { errEl.textContent = data.error; errEl.style.display = ''; return; }
+
+      var tbody = document.querySelector('#roster-table tbody');
+      var tr = document.createElement('tr');
+      tr.id = 'student-row-' + data.id;
+      tr.setAttribute('data-student-id', data.id);
+      tr.innerHTML =
+        '<td style="padding:0.3rem 0.5rem;">' +
+          '<span class="student-display">' + data.first_name + '</span>' +
+          '<input class="student-edit first-name" type="text" value="' + data.first_name + '" style="display:none; width:100%;">' +
+        '</td>' +
+        '<td style="padding:0.3rem 0.5rem;">' +
+          '<span class="student-display">' + data.middle_initial + '</span>' +
+          '<input class="student-edit middle-initial" type="text" value="' + data.middle_initial + '" maxlength="5" style="display:none; width:3rem;">' +
+        '</td>' +
+        '<td style="padding:0.3rem 0.5rem;">' +
+          '<span class="student-display">' + data.last_name + '</span>' +
+          '<input class="student-edit last-name" type="text" value="' + data.last_name + '" style="display:none; width:100%;">' +
+        '</td>' +
+        '<td style="padding:0.3rem 0.5rem; text-align:right;">' +
+          '<span class="view-mode" style="display:inline-flex; gap:0.4rem;">' +
+            '<button class="btn btn-ghost btn-sm" onclick="startEdit(' + data.id + ')">Edit</button>' +
+            '<button class="btn btn-sm" style="background:var(--berry); color:#fff;" onclick="deleteStudent(' + data.id + ', \'' + data.display_name + '\')">Delete</button>' +
+          '</span>' +
+          '<span class="edit-mode" style="display:none; gap:0.4rem;">' +
+            '<button class="btn btn-primary btn-sm" onclick="saveEdit(' + data.id + ')">Save</button>' +
+            '<button class="btn btn-ghost btn-sm" onclick="cancelEdit(' + data.id + ')">Cancel</button>' +
+          '</span>' +
+        '</td>';
+      tbody.appendChild(tr);
+
+      document.getElementById('add-first').value = '';
+      document.getElementById('add-last').value = '';
+      document.getElementById('add-mi').value = '';
+    })
+    .catch(function(){ errEl.textContent = 'Could not add student. Please try again.'; errEl.style.display = ''; });
+  };
+
+  // Allow Enter key to submit the add-student form
+  ['add-first', 'add-mi', 'add-last'].forEach(function(id) {
+    document.getElementById(id).addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') { e.preventDefault(); addStudent(); }
+    });
+  });
+})();
+</script>
+
+{% endblock %}
